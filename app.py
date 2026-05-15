@@ -1369,7 +1369,7 @@ elif page == "ℹ️ About":
 
         All uploaded data lives only in memory
         for the duration of your browser session.
-        When you close the tab — it is gone.
+        When you close the tab it is gone.
         """)
 
     with col4:
@@ -1382,7 +1382,7 @@ elif page == "ℹ️ About":
         - Streamlit Cloud temporarily processes
           your data during the session
 
-        Your data is never permanently stored —
+        Your data is never permanently stored
         but a summary is shared with our AI provider.
         """)
 
