@@ -1392,8 +1392,9 @@ elif page == "ℹ️ About":
     col5, col6 = st.columns(2)
 
     with col5:
-        st.markdown("### ✅ Safe to Upload")
-        st.markdown("""
+        st.success("""
+        **✅ Safe to Upload**
+
         - Aggregated business data
         - Public datasets
         - Anonymized survey results
