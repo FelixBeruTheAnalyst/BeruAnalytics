@@ -1403,8 +1403,9 @@ elif page == "ℹ️ About":
         """)
 
     with col6:
-        st.markdown("### ❌ Avoid Uploading")
-        st.markdown("""
+        st.error("""
+        **❌ Avoid Uploading**
+
         - Patient records with names or IDs
         - Employee personal information
         - Financial data with account numbers
