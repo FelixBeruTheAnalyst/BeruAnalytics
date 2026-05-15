@@ -1297,13 +1297,13 @@ elif page == "ℹ️ About":
         ### What is BeruAnalytics?
 
         BeruAnalytics is an AI-powered data analytics platform built to make
-        professional data analysis accessible to everyone — without needing
+        professional data analysis accessible to everyone without needing
         to write code or hire a data analyst.
 
         Upload your CSV or Excel file and get:
         - **Interactive dashboards** with KPI cards and multiple chart types
         - **AI-generated reports** in Word and PDF format
-        - **Natural language insights** — ask questions, get answers
+        - **Natural language insights**  ask questions, get answers
         - **Smart data exploration** with search, filter and export
 
         ### Who is it for?
