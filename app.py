@@ -1341,7 +1341,7 @@ elif page == "ℹ️ About":
 
         st.divider()
         st.markdown("**📊 Portfolio:**")
-        st.markdown("[www.linkedin.com/in/felix-beru-04b905280]")
+        st.markdown("[linkedin](www.linkedin.com/in/felix-beru-04b905280)")
         st.markdown("[GitHub](https://github.com/FelixBeruTheAnalyst)")
         st.markdown("[Maternal Health Dashboard](https://kenya-maternal-health-anc-analysis-oasrbxen82vgwacmq4vbny.streamlit.app/)")
         st.markdown("[CPI Inflation Dashboard](https://kenya-cpi-inflation-analysis-l28f5kfd6qypapa6jrkazq.streamlit.app/)")
