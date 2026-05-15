@@ -1337,6 +1337,7 @@ elif page == "ℹ️ About":
         - Financial data analytics
         - BI dashboard development
         - AI-powered data tools
+        - Data Cleaning and Transformation
         """)
 
         st.divider()
