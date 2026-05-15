@@ -1352,7 +1352,6 @@ elif page == "ℹ️ About":
         st.markdown("079-797-1074")
 
      st.divider()
-
     # ── DATA PRIVACY & SECURITY ──
     st.markdown("<div class='section-header'>🔒 Data Privacy & Security</div>",
                 unsafe_allow_html=True)
