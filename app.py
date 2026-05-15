@@ -1351,8 +1351,6 @@ elif page == "ℹ️ About":
         st.markdown("berufelix42@gmail.com")
         st.markdown("079-797-1074")
 
-    st.divider()
-
      st.divider()
 
     # ── DATA PRIVACY & SECURITY ──
