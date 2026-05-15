@@ -1433,5 +1433,4 @@ elif page == "ℹ️ About":
 
     st.divider()
     st.caption("BeruAnalytics v1.0 | Built by Felix Beru Tsinzole | Nairobi, Kenya 🇰🇪")
-Commit the change — Streamlit will auto-redeploy in about a minute.
-    st.caption("BeruAnalytics v1.0 | Built by Felix Beru Tsinzole | Nairobi, Kenya 🇰🇪")
+
