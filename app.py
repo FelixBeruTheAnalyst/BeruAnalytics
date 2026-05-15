@@ -1352,4 +1352,86 @@ elif page == "ℹ️ About":
         st.markdown("079-797-1074")
 
     st.divider()
+
+     st.divider()
+
+    # ── DATA PRIVACY & SECURITY ──
+    st.markdown("<div class='section-header'>🔒 Data Privacy & Security</div>",
+                unsafe_allow_html=True)
+
+    col3, col4 = st.columns(2)
+
+    with col3:
+        st.success("""
+        **✅ What BeruAnalytics does NOT do:**
+
+        - Does not store your data permanently
+        - Does not share your data with other users
+        - Does not write your data to any database
+        - Each session is completely isolated
+
+        All uploaded data lives only in memory
+        for the duration of your browser session.
+        When you close the tab — it is gone.
+        """)
+
+    with col4:
+        st.warning("""
+        **⚠️ What you should know:**
+
+        - A data summary (first 5 rows + statistics)
+          is sent to Groq AI for analysis
+        - Data is transmitted over HTTPS (encrypted)
+        - Streamlit Cloud temporarily processes
+          your data during the session
+
+        Your data is never permanently stored —
+        but a summary is shared with our AI provider.
+        """)
+
+    st.divider()
+
+    # Safe and unsafe data
+    col5, col6 = st.columns(2)
+
+    with col5:
+        st.markdown("### ✅ Safe to Upload")
+        st.markdown("""
+        - Aggregated business data
+        - Public datasets
+        - Anonymized survey results
+        - Financial summaries without account numbers
+        - Sales and operational data
+        - Research and monitoring data
+        """)
+
+    with col6:
+        st.markdown("### ❌ Avoid Uploading")
+        st.markdown("""
+        - Patient records with names or IDs
+        - Employee personal information
+        - Financial data with account numbers
+        - Any data covered by GDPR
+        - Kenya Data Protection Act regulated data
+        - Passwords or authentication credentials
+        """)
+
+    st.divider()
+
+    st.info("""
+    **📋 Our Privacy Commitment**
+
+    BeruAnalytics does not store your data. All uploads are processed
+    in memory and deleted when your session ends. A data summary is
+    sent to our AI provider (Groq) for analysis purposes only.
+
+    **Do not upload personally identifiable or confidential information.**
+
+    For enterprise deployments requiring full data privacy,
+    contact us about on-premise installation options.
+    """)
+
+    st.divider()
+    st.caption("BeruAnalytics v1.0 | Built by Felix Beru Tsinzole | Nairobi, Kenya 🇰🇪")
+Commit the change — Streamlit will auto-redeploy in about a minute.
     st.caption("BeruAnalytics v1.0 | Built by Felix Beru Tsinzole | Nairobi, Kenya 🇰🇪")
