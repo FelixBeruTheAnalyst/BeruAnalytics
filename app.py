@@ -247,7 +247,7 @@ if page == "🏠 Home":
     <div class='hero'>
         <h1>📊 BeruAnalytics</h1>
         <p>Upload your data. Get instant AI-powered analysis, 
-        interactive dashboards and professional reports — in minutes.</p>
+        interactive dashboards and professional reports in minutes.</p>
         <p style='font-size:14px; opacity:0.7;'>
             Powered by AI | Built for Kenya and beyond 🇰🇪
         </p>
