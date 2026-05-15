@@ -285,7 +285,7 @@ if page == "🏠 Home":
         <div class='feature-card'>
             <h3>📊 Interactive Dashboard</h3>
             <p>Automatic KPI cards, bar charts, line charts, 
-            scatter plots and correlation heatmaps — generated 
+            scatter plots and correlation heatmaps generated 
             instantly from your data with full interactivity.</p>
         </div>
         """, unsafe_allow_html=True)
@@ -328,7 +328,7 @@ if page == "🏠 Home":
         st.markdown("""
         <div class='feature-card'>
             <h3>🔍 Smart Filters</h3>
-            <p>Filter your charts and tables by any column — 
+            <p>Filter your charts and tables by any column 
             categories, date ranges, numeric thresholds. 
             Every chart updates instantly.</p>
         </div>
