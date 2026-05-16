@@ -118,7 +118,8 @@ if 'file_name' not in st.session_state:
     st.session_state.file_name = None
 if 'analysis' not in st.session_state:
     st.session_state.analysis = None
-
+if 'page' not in st.session_state:
+    st.session_state.page = "🏠 Home"
 # ================================================
 # SIDEBAR
 # ================================================
@@ -132,12 +133,16 @@ with st.sidebar:
 
     st.divider()
 
-    page = st.radio(
+   page = st.radio(
         "Navigate",
         ["🏠 Home", "📊 Dashboard", "🤖 BeruDataNarrate",
          "💬 AI Assistant", "📋 Data Explorer", "ℹ️ About"],
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        index=["🏠 Home", "📊 Dashboard", "🤖 BeruDataNarrate",
+               "💬 AI Assistant", "📋 Data Explorer", "ℹ️ About"]
+               .index(st.session_state.page)
     )
+    st.session_state.page = page
 
     st.divider()
 
@@ -244,36 +249,91 @@ if page == "🏠 Home":
     </div>
     """, unsafe_allow_html=True)
 
-    # Navigation buttons with hover tooltips
-    st.markdown("""
-    <div class='nav-btn-container'>
-        <div class='nav-btn'>
-            📊 Dashboard
-            <span class='tooltip'>Interactive charts and KPI cards from your data</span>
-        </div>
-        <div class='nav-btn'>
-            🤖 BeruDataNarrate
-            <span class='tooltip'>AI-powered Word and PDF report generator</span>
-        </div>
-        <div class='nav-btn'>
-            💬 AI Assistant
-            <span class='tooltip'>Ask questions about your data in plain English</span>
-        </div>
-        <div class='nav-btn'>
-            📋 Data Explorer
-            <span class='tooltip'>Search, filter and export your data</span>
-        </div>
-        <div class='nav-btn'>
-            ℹ️ About
-            <span class='tooltip'>Privacy, security and platform information</span>
-        </div>
-    </div>
-    <p style='color:#888; font-size:13px; margin-top:-8px;'>
-        👆 Hover over buttons to preview features — use the sidebar to navigate
-    </p>
-    """, unsafe_allow_html=True)
+    # ── FUNCTIONAL NAVIGATION BUTTONS ──
+    st.markdown("### 🧭 Quick Navigation")
+    st.markdown("*Click any feature to go directly to it*")
 
-    st.divider()
+    nav1, nav2, nav3, nav4, nav5 = st.columns(5)
+
+    with nav1:
+        st.markdown("""
+        <div class='feature-card' style='text-align:center; cursor:pointer;'>
+            <h3 style='font-size:24px; margin:0;'>📊</h3>
+            <h3>Dashboard</h3>
+            <p>Interactive charts and KPI cards — bar, pie, scatter,
+            heatmap and line charts generated instantly from your data.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Go to Dashboard →",
+                      key="nav_dash",
+                      use_container_width=True,
+                      type="primary"):
+            st.session_state.page = "📊 Dashboard"
+            st.rerun()
+
+    with nav2:
+        st.markdown("""
+        <div class='feature-card' style='text-align:center; cursor:pointer;'>
+            <h3 style='font-size:24px; margin:0;'>🤖</h3>
+            <h3>BeruDataNarrate</h3>
+            <p>AI-powered report generator — upload data, get a
+            professional Word and PDF report in minutes.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Go to Reports →",
+                      key="nav_narrate",
+                      use_container_width=True,
+                      type="primary"):
+            st.session_state.page = "🤖 BeruDataNarrate"
+            st.rerun()
+
+    with nav3:
+        st.markdown("""
+        <div class='feature-card' style='text-align:center; cursor:pointer;'>
+            <h3 style='font-size:24px; margin:0;'>💬</h3>
+            <h3>AI Assistant</h3>
+            <p>Ask questions about your data in plain English and
+            get instant AI-powered answers and insights.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Go to Assistant →",
+                      key="nav_chat",
+                      use_container_width=True,
+                      type="primary"):
+            st.session_state.page = "💬 AI Assistant"
+            st.rerun()
+
+    with nav4:
+        st.markdown("""
+        <div class='feature-card' style='text-align:center; cursor:pointer;'>
+            <h3 style='font-size:24px; margin:0;'>📋</h3>
+            <h3>Data Explorer</h3>
+            <p>Search, filter, sort and export your data as
+            CSV or Excel with one click.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Go to Explorer →",
+                      key="nav_explore",
+                      use_container_width=True,
+                      type="primary"):
+            st.session_state.page = "📋 Data Explorer"
+            st.rerun()
+
+    with nav5:
+        st.markdown("""
+        <div class='feature-card' style='text-align:center; cursor:pointer;'>
+            <h3 style='font-size:24px; margin:0;'>ℹ️</h3>
+            <h3>About</h3>
+            <p>Privacy policy, data security information
+            and platform details.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Go to About →",
+                      key="nav_about",
+                      use_container_width=True,
+                      type="primary"):
+            st.session_state.page = "ℹ️ About"
+            st.rerun()
 
     # Get Started
     st.markdown("<div class='section-header'>🚀 Get Started</div>",
