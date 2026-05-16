@@ -120,6 +120,7 @@ if 'analysis' not in st.session_state:
     st.session_state.analysis = None
 if 'page' not in st.session_state:
     st.session_state.page = "🏠 Home"
+
 # ================================================
 # SIDEBAR
 # ================================================
@@ -133,14 +134,14 @@ with st.sidebar:
 
     st.divider()
 
-   page = st.radio(
+    pages = ["🏠 Home", "📊 Dashboard", "🤖 BeruDataNarrate",
+             "💬 AI Assistant", "📋 Data Explorer", "ℹ️ About"]
+
+    page = st.radio(
         "Navigate",
-        ["🏠 Home", "📊 Dashboard", "🤖 BeruDataNarrate",
-         "💬 AI Assistant", "📋 Data Explorer", "ℹ️ About"],
+        pages,
         label_visibility="collapsed",
-        index=["🏠 Home", "📊 Dashboard", "🤖 BeruDataNarrate",
-               "💬 AI Assistant", "📋 Data Explorer", "ℹ️ About"]
-               .index(st.session_state.page)
+        index=pages.index(st.session_state.page)
     )
     st.session_state.page = page
 
@@ -163,7 +164,6 @@ with st.sidebar:
     st.divider()
     st.caption("Built by Felix Beru Tsinzole")
     st.caption("Nairobi, Kenya 🇰🇪")
-
 # ================================================
 # HELPER FUNCTIONS
 # ================================================
