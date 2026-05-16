@@ -1,4 +1,271 @@
+
+import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+import io
+import os
+import json
+from datetime import datetime
+
 # ================================================
+# PAGE CONFIG
+# ================================================
+st.set_page_config(
+    page_title="BeruAnalytics",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# ================================================
+# CUSTOM CSS
+# ================================================
+st.markdown("""
+<style>
+    /* Main background */
+    .main { background-color: #F8F9FA; }
+
+    /* Hide default streamlit menu */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* KPI Cards */
+    .kpi-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-left: 4px solid #1A6B72;
+        margin-bottom: 16px;
+    }
+
+    .kpi-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1A1A2E;
+        margin: 0;
+    }
+
+    .kpi-label {
+        font-size: 13px;
+        color: #555555;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .kpi-trend-up {
+        color: #2ecc71;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .kpi-trend-down {
+        color: #e74c3c;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    /* Hero section */
+    .hero {
+        background: linear-gradient(135deg, #1A6B72 0%, #1A3A5C 100%);
+        border-radius: 16px;
+        padding: 48px 40px;
+        color: white;
+        margin-bottom: 32px;
+    }
+
+    .hero h1 {
+        font-size: 42px;
+        font-weight: 800;
+        margin: 0 0 12px 0;
+        color: white;
+    }
+
+    .hero p {
+        font-size: 18px;
+        opacity: 0.9;
+        margin: 0 0 24px 0;
+        color: white;
+    }
+
+    /* Feature cards */
+    .feature-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        height: 100%;
+        border-top: 3px solid #1A6B72;
+    }
+
+    .feature-card h3 {
+        color: #1A6B72;
+        font-size: 18px;
+        margin-bottom: 8px;
+    }
+
+    .feature-card p {
+        color: #555555;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    /* Section headers */
+    .section-header {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1A1A2E;
+        border-bottom: 3px solid #1A6B72;
+        padding-bottom: 8px;
+        margin-bottom: 24px;
+    }
+
+    /* Upload area */
+    .upload-area {
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        text-align: center;
+        border: 2px dashed #1A6B72;
+    }
+
+    /* Sidebar */
+    .css-1d391kg {
+        background-color: #1A1A2E;
+    }
+
+    /* Brand colors */
+    :root {
+        --primary: #1A6B72;
+        --secondary: #1A3A5C;
+        --accent: #E8590C;
+        --dark: #1A1A2E;
+        --gray: #555555;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ================================================
+# SESSION STATE — store uploaded data
+# ================================================
+if 'df' not in st.session_state:
+    st.session_state.df = None
+if 'file_name' not in st.session_state:
+    st.session_state.file_name = None
+if 'analysis' not in st.session_state:
+    st.session_state.analysis = None
+
+# ================================================
+# SIDEBAR
+# ================================================
+with st.sidebar:
+    st.markdown("""
+    <div style='text-align:center; padding: 16px 0;'>
+        <h2 style='color:#1A6B72; margin:0; font-size:24px;'>📊 BeruAnalytics</h2>
+        <p style='color:#888; font-size:12px; margin:4px 0 0 0;'>
+            AI-Powered Data Analytics
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+
+    page = st.radio(
+        "Navigate",
+        ["🏠 Home",
+         "📊 Dashboard",
+         "🤖 BeruDataNarrate",
+         "💬 AI Assistant",
+         "📋 Data Explorer",
+         "ℹ️ About"],
+        label_visibility="collapsed"
+    )
+
+    st.divider()
+
+    # Data status
+    if st.session_state.df is not None:
+        df = st.session_state.df
+        st.success(f"✅ Data loaded")
+        st.caption(f"📁 {st.session_state.file_name}")
+        st.caption(f"📊 {len(df):,} rows × {len(df.columns)} cols")
+        if st.button("🗑️ Clear Data", use_container_width=True):
+            st.session_state.df = None
+            st.session_state.file_name = None
+            st.session_state.analysis = None
+            st.rerun()
+    else:
+        st.warning("⚠️ No data loaded")
+        st.caption("Upload a file to get started")
+
+    st.divider()
+    st.caption("Built by Felix Beru Tsinzole")
+    st.caption("Nairobi, Kenya 🇰🇪")
+
+# ================================================
+# HELPER FUNCTIONS
+# ================================================
+def load_data(uploaded_file):
+    """Load CSV or Excel file into dataframe"""
+    try:
+        if uploaded_file.name.endswith('.csv'):
+            df = pd.read_csv(uploaded_file, encoding='latin1')
+        else:
+            df = pd.read_excel(uploaded_file)
+        df.columns = df.columns.str.strip()
+        return df
+    except Exception as e:
+        st.error(f"Error loading file: {e}")
+        return None
+
+def get_kpi_data(df):
+    """Extract KPI metrics from dataframe"""
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    kpis = []
+    for col in numeric_cols[:4]:
+        mean_val = df[col].mean()
+        kpis.append({
+            'label': col,
+            'value': mean_val,
+            'total': df[col].sum(),
+            'min': df[col].min(),
+            'max': df[col].max(),
+        })
+    return kpis
+
+# ================================================
+# PAGE 1 — HOME
+# ================================================
+if page == "🏠 Home":
+
+    # Hero section
+    st.markdown("""
+    <div class='hero'>
+        <h1>📊 BeruAnalytics</h1>
+        <p>Upload your data. Get instant AI-powered analysis, 
+        interactive dashboards and professional reports in minutes.</p>
+        <p style='font-size:14px; opacity:0.7;'>
+            Powered by AI | Built for Kenya and beyond 🇰🇪
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Quick upload on home page
+    st.markdown("<div class='section-header'>🚀 Get Started</div>",
+                unsafe_allow_html=True)
+
+    uploaded = st.file_uploader(
+        "Upload your CSV or Excel file to begin",
+        type=['csv', 'xlsx', 'xls'],
+        help="Supported formats: CSV, Excel (.xlsx, .xls)"
+    )
+
+    # ================================================
 # HELPER FUNCTIONS
 # ================================================
 
@@ -335,281 +602,6 @@ if page == "🏠 Home":
     st.divider()
     st.caption("BeruAnalytics | Built by Felix Beru Tsinzole | Nairobi, Kenya 🇰🇪")
 
-import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
-import io
-import os
-import json
-from datetime import datetime
-
-# ================================================
-# PAGE CONFIG
-# ================================================
-st.set_page_config(
-    page_title="BeruAnalytics",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# ================================================
-# CUSTOM CSS
-# ================================================
-st.markdown("""
-<style>
-    /* Main background */
-    .main { background-color: #F8F9FA; }
-
-    /* Hide default streamlit menu */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-
-    /* KPI Cards */
-    .kpi-card {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border-left: 4px solid #1A6B72;
-        margin-bottom: 16px;
-    }
-
-    .kpi-value {
-        font-size: 28px;
-        font-weight: 700;
-        color: #1A1A2E;
-        margin: 0;
-    }
-
-    .kpi-label {
-        font-size: 13px;
-        color: #555555;
-        margin: 0;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .kpi-trend-up {
-        color: #2ecc71;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .kpi-trend-down {
-        color: #e74c3c;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    /* Hero section */
-    .hero {
-        background: linear-gradient(135deg, #1A6B72 0%, #1A3A5C 100%);
-        border-radius: 16px;
-        padding: 48px 40px;
-        color: white;
-        margin-bottom: 32px;
-    }
-
-    .hero h1 {
-        font-size: 42px;
-        font-weight: 800;
-        margin: 0 0 12px 0;
-        color: white;
-    }
-
-    .hero p {
-        font-size: 18px;
-        opacity: 0.9;
-        margin: 0 0 24px 0;
-        color: white;
-    }
-
-    /* Feature cards */
-    .feature-card {
-        background: white;
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        height: 100%;
-        border-top: 3px solid #1A6B72;
-    }
-
-    .feature-card h3 {
-        color: #1A6B72;
-        font-size: 18px;
-        margin-bottom: 8px;
-    }
-
-    .feature-card p {
-        color: #555555;
-        font-size: 14px;
-        line-height: 1.6;
-    }
-
-    /* Section headers */
-    .section-header {
-        font-size: 22px;
-        font-weight: 700;
-        color: #1A1A2E;
-        border-bottom: 3px solid #1A6B72;
-        padding-bottom: 8px;
-        margin-bottom: 24px;
-    }
-
-    /* Upload area */
-    .upload-area {
-        background: white;
-        border-radius: 12px;
-        padding: 32px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        text-align: center;
-        border: 2px dashed #1A6B72;
-    }
-
-    /* Sidebar */
-    .css-1d391kg {
-        background-color: #1A1A2E;
-    }
-
-    /* Brand colors */
-    :root {
-        --primary: #1A6B72;
-        --secondary: #1A3A5C;
-        --accent: #E8590C;
-        --dark: #1A1A2E;
-        --gray: #555555;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ================================================
-# SESSION STATE — store uploaded data
-# ================================================
-if 'df' not in st.session_state:
-    st.session_state.df = None
-if 'file_name' not in st.session_state:
-    st.session_state.file_name = None
-if 'analysis' not in st.session_state:
-    st.session_state.analysis = None
-
-# ================================================
-# SIDEBAR
-# ================================================
-with st.sidebar:
-    st.markdown("""
-    <div style='text-align:center; padding: 16px 0;'>
-        <h2 style='color:#1A6B72; margin:0; font-size:24px;'>📊 BeruAnalytics</h2>
-        <p style='color:#888; font-size:12px; margin:4px 0 0 0;'>
-            AI-Powered Data Analytics
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.divider()
-
-    page = st.radio(
-        "Navigate",
-        ["🏠 Home",
-         "📊 Dashboard",
-         "🤖 BeruDataNarrate",
-         "💬 AI Assistant",
-         "📋 Data Explorer",
-         "ℹ️ About"],
-        label_visibility="collapsed"
-    )
-
-    st.divider()
-
-    # Data status
-    if st.session_state.df is not None:
-        df = st.session_state.df
-        st.success(f"✅ Data loaded")
-        st.caption(f"📁 {st.session_state.file_name}")
-        st.caption(f"📊 {len(df):,} rows × {len(df.columns)} cols")
-        if st.button("🗑️ Clear Data", use_container_width=True):
-            st.session_state.df = None
-            st.session_state.file_name = None
-            st.session_state.analysis = None
-            st.rerun()
-    else:
-        st.warning("⚠️ No data loaded")
-        st.caption("Upload a file to get started")
-
-    st.divider()
-    st.caption("Built by Felix Beru Tsinzole")
-    st.caption("Nairobi, Kenya 🇰🇪")
-
-# ================================================
-# HELPER FUNCTIONS
-# ================================================
-def load_data(uploaded_file):
-    """Load CSV or Excel file into dataframe"""
-    try:
-        if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file, encoding='latin1')
-        else:
-            df = pd.read_excel(uploaded_file)
-        df.columns = df.columns.str.strip()
-        return df
-    except Exception as e:
-        st.error(f"Error loading file: {e}")
-        return None
-
-def get_kpi_data(df):
-    """Extract KPI metrics from dataframe"""
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    kpis = []
-    for col in numeric_cols[:4]:
-        mean_val = df[col].mean()
-        kpis.append({
-            'label': col,
-            'value': mean_val,
-            'total': df[col].sum(),
-            'min': df[col].min(),
-            'max': df[col].max(),
-        })
-    return kpis
-
-# ================================================
-# PAGE 1 — HOME
-# ================================================
-if page == "🏠 Home":
-
-    # Hero section
-    st.markdown("""
-    <div class='hero'>
-        <h1>📊 BeruAnalytics</h1>
-        <p>Upload your data. Get instant AI-powered analysis, 
-        interactive dashboards and professional reports in minutes.</p>
-        <p style='font-size:14px; opacity:0.7;'>
-            Powered by AI | Built for Kenya and beyond 🇰🇪
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Quick upload on home page
-    st.markdown("<div class='section-header'>🚀 Get Started</div>",
-                unsafe_allow_html=True)
-
-    uploaded = st.file_uploader(
-        "Upload your CSV or Excel file to begin",
-        type=['csv', 'xlsx', 'xls'],
-        help="Supported formats: CSV, Excel (.xlsx, .xls)"
-    )
-
-    if uploaded:
-        df = load_data(uploaded)
-        if df is not None:
-            st.session_state.df = df
-            st.session_state.file_name = uploaded.name
-            st.success(f"✅ {uploaded.name} loaded successfully — {len(df):,} rows, {len(df.columns)} columns")
-            st.info("👈 Use the sidebar to navigate to Dashboard, BeruDataNarrate or Data Explorer")
-
-    st.divider()
 
     # Feature cards
     st.markdown("<div class='section-header'>✨ What BeruAnalytics Does</div>",
