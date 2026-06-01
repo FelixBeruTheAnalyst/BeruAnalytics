@@ -552,16 +552,24 @@ elif page == "📊 Dashboard":
         st.markdown("### 🔍 Filters")
         filtered_df = df.copy()
         for col in numeric_cols[:3]:
-            min_val = float(df[col].min())
-            max_val = float(df[col].max())
-            if min_val != max_val:
+            try:
+                # ✅ FIX: coerce column to numeric first, dropping anything unparseable
+                col_clean = pd.to_numeric(filtered_df[col], errors='coerce')
+                min_val = float(col_clean.min(skipna=True))
+                max_val = float(col_clean.max(skipna=True))
+                # Only show slider if we got valid, distinct numbers
+                if pd.isna(min_val) or pd.isna(max_val) or min_val == max_val:
+                    continue
                 selected = st.slider(f"{col}", min_val, max_val, (min_val, max_val))
                 filtered_df = filtered_df[
-                    (filtered_df[col] >= selected[0]) &
-                    (filtered_df[col] <= selected[1])
+                    (pd.to_numeric(filtered_df[col], errors='coerce') >= selected[0]) &
+                    (pd.to_numeric(filtered_df[col], errors='coerce') <= selected[1])
                 ]
+            except Exception:
+                # If anything still goes wrong, skip this column's filter silently
+                continue
         for col in categorical_cols[:2]:
-            options = df[col].unique().tolist()
+            options = df[col].dropna().unique().tolist()
             selected_cats = st.multiselect(f"{col}", options, default=options)
             if selected_cats:
                 filtered_df = filtered_df[filtered_df[col].isin(selected_cats)]
@@ -571,9 +579,14 @@ elif page == "📊 Dashboard":
     kpi_cols = st.columns(len(numeric_cols[:4]) if numeric_cols else 1)
     for i, col in enumerate(numeric_cols[:4]):
         with kpi_cols[i]:
-            total = filtered_df[col].sum()
-            mean = filtered_df[col].mean()
-            st.metric(label=col, value=f"{mean:.1f}", delta=f"Total: {total:,.1f}")
+            try:
+                # ✅ FIX: coerce to numeric before aggregating
+                col_numeric = pd.to_numeric(filtered_df[col], errors='coerce')
+                total = col_numeric.sum(skipna=True)
+                mean = col_numeric.mean(skipna=True)
+                st.metric(label=col, value=f"{mean:.1f}", delta=f"Total: {total:,.1f}")
+            except Exception:
+                st.metric(label=col, value="N/A", delta="Mixed types")
 
     st.divider()
 
