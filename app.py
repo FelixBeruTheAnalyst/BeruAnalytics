@@ -312,24 +312,69 @@ def safe_dataframe(df: pd.DataFrame, **kwargs):
 #  Prevents crashes in sliders, KPI cards, and chart aggregations.
 # ================================================================
 
-def safe_min(series) -> float:
-    """Returns float min, ignoring NaN. Returns 0.0 if all NaN."""
-    v = pd.to_numeric(series, errors='coerce').min(skipna=True)
+def _to_series(data) -> pd.Series:
+    """
+    Internal helper: guarantees we always work with a 1-D Series.
+
+    Handles every way a caller can accidentally pass the wrong shape:
+      - DataFrame with 1 column  → extract that column as a Series
+      - DataFrame with N columns → flatten all values into one Series
+      - numpy ndarray            → convert to Series
+      - list / scalar            → convert to Series
+      - Series                   → returned unchanged
+
+    This is the permanent fix for:
+      TypeError: arg must be a list, tuple, 1-d array, or Series
+    which fires when duplicate column names cause df[col] to return
+    a DataFrame instead of a Series — even after sanitization,
+    because filtered_df is a view/copy that can re-introduce dupes.
+    """
+    if isinstance(data, pd.DataFrame):
+        # Deduplicate columns on the copy before extracting
+        data = data.loc[:, ~data.columns.duplicated(keep='first')]
+        if data.shape[1] == 1:
+            return data.iloc[:, 0]
+        # Multiple columns: stack all values into one flat Series
+        return data.stack().reset_index(drop=True)
+    if isinstance(data, np.ndarray):
+        return pd.Series(data.flatten())
+    if not isinstance(data, pd.Series):
+        return pd.Series(list(data) if hasattr(data, '__iter__') else [data])
+    return data
+
+
+def safe_min(data) -> float:
+    """
+    Float min of any array-like, ignoring NaN and non-numeric values.
+    Returns 0.0 if empty or all-NaN.
+    Works correctly even when df[col] accidentally returns a DataFrame.
+    """
+    v = pd.to_numeric(_to_series(data), errors='coerce').min(skipna=True)
     return float(v) if pd.notna(v) else 0.0
 
-def safe_max(series) -> float:
-    """Returns float max, ignoring NaN. Returns 1.0 if all NaN."""
-    v = pd.to_numeric(series, errors='coerce').max(skipna=True)
+def safe_max(data) -> float:
+    """
+    Float max of any array-like, ignoring NaN and non-numeric values.
+    Returns 1.0 if empty or all-NaN (so sliders always have a valid range).
+    Works correctly even when df[col] accidentally returns a DataFrame.
+    """
+    v = pd.to_numeric(_to_series(data), errors='coerce').max(skipna=True)
     return float(v) if pd.notna(v) else 1.0
 
-def safe_mean(series) -> float:
-    """Returns float mean, ignoring NaN. Returns 0.0 if all NaN."""
-    v = pd.to_numeric(series, errors='coerce').mean(skipna=True)
+def safe_mean(data) -> float:
+    """
+    Float mean of any array-like, ignoring NaN and non-numeric values.
+    Returns 0.0 if empty or all-NaN.
+    """
+    v = pd.to_numeric(_to_series(data), errors='coerce').mean(skipna=True)
     return float(v) if pd.notna(v) else 0.0
 
-def safe_sum(series) -> float:
-    """Returns float sum, ignoring NaN. Returns 0.0 if all NaN."""
-    v = pd.to_numeric(series, errors='coerce').sum(skipna=True)
+def safe_sum(data) -> float:
+    """
+    Float sum of any array-like, ignoring NaN and non-numeric values.
+    Returns 0.0 if empty or all-NaN.
+    """
+    v = pd.to_numeric(_to_series(data), errors='coerce').sum(skipna=True)
     return float(v) if pd.notna(v) else 0.0
 
 
@@ -685,6 +730,11 @@ elif page == "📊 Dashboard":
     with st.sidebar:
         st.markdown("### 🔍 Filters")
         filtered_df = df.copy()
+        # Re-sanitize the copy: filtering can produce a view that
+        # re-introduces duplicate column issues on some pandas versions
+        filtered_df.columns = [str(c) for c in filtered_df.columns]
+        if filtered_df.columns.duplicated().any():
+            filtered_df = filtered_df.loc[:, ~filtered_df.columns.duplicated(keep='first')]
         for col in numeric_cols[:3]:
             col_label = str(col)
             min_val = safe_min(filtered_df[col])
