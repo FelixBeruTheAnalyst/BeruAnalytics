@@ -164,6 +164,64 @@ with st.sidebar:
     st.divider()
     st.caption("Built by Felix Beru Tsinzole")
     st.caption("Nairobi, Kenya 🇰🇪")
+
+
+# ================================================
+# ✅ FIX 1: SAFE DATAFRAME DISPLAY WRAPPER
+# Prevents PyArrow crash from duplicate column names
+# and mixed-type columns. Use everywhere instead of
+# st.dataframe() directly.
+# ================================================
+def safe_dataframe(df, **kwargs):
+    """
+    Safe wrapper around st.dataframe().
+    Fixes duplicate column names and mixed-type columns
+    that cause PyArrow / Arrow serialization crashes in Streamlit.
+    """
+    display_df = df.copy()
+
+    # Fix duplicate column names (root cause of the crash)
+    if display_df.columns.duplicated().any():
+        dupes = display_df.columns[display_df.columns.duplicated()].tolist()
+        st.warning(f"⚠️ Duplicate columns detected and auto-fixed: {dupes}")
+        display_df = display_df.loc[:, ~display_df.columns.duplicated(keep='first')]
+
+    # Fix mixed-type object columns that also break Arrow serialization
+    for col in display_df.columns:
+        if display_df[col].dtype == object:
+            try:
+                display_df[col] = display_df[col].astype(str)
+            except Exception:
+                pass
+
+    # Attempt to display; fall back to plain dict if Arrow still fails
+    try:
+        st.dataframe(display_df, **kwargs)
+    except Exception as e:
+        st.error(f"⚠️ Table render error: {e}")
+        st.write(display_df.head(10).to_dict(orient='records'))
+
+
+# ================================================
+# ✅ FIX 2: DEDUPLICATE COLUMNS IN load_data()
+# Cleans column names at the source so every page
+# that reads st.session_state.df is protected.
+# ================================================
+def deduplicate_columns(df):
+    """
+    Renames duplicate columns by appending _1, _2 etc.
+    Example: ['Sales', 'Sales', 'Date'] → ['Sales', 'Sales_1', 'Date']
+    """
+    cols = pd.Series(df.columns)
+    for dup in cols[cols.duplicated()].unique():
+        indices = cols[cols == dup].index.tolist()
+        for i, idx in enumerate(indices):
+            if i != 0:
+                cols[idx] = f"{dup}_{i}"
+    df.columns = cols
+    return df
+
+
 # ================================================
 # HELPER FUNCTIONS
 # ================================================
@@ -173,7 +231,16 @@ def load_data(uploaded_file):
             df = pd.read_csv(uploaded_file, encoding='latin1')
         else:
             df = pd.read_excel(uploaded_file)
+
+        # Strip whitespace from column names
         df.columns = df.columns.str.strip()
+
+        # ✅ FIX: Deduplicate column names immediately after loading
+        if df.columns.duplicated().any():
+            dupes = df.columns[df.columns.duplicated()].tolist()
+            st.warning(f"⚠️ Duplicate column names found and auto-fixed: {dupes}. "
+                       f"This was causing the app crash — now resolved.")
+            df = deduplicate_columns(df)
 
         if len(df) == 0:
             st.error("❌ The uploaded file is empty.")
@@ -186,9 +253,9 @@ def load_data(uploaded_file):
         if missing > 0:
             pct = (missing / (len(df) * len(df.columns))) * 100
             warnings_list.append(f"⚠️ {missing:,} missing values found ({pct:.1f}%) — may affect accuracy")
-        dupes = df.duplicated().sum()
-        if dupes > 0:
-            warnings_list.append(f"⚠️ {dupes:,} duplicate rows detected")
+        dupes_rows = df.duplicated().sum()
+        if dupes_rows > 0:
+            warnings_list.append(f"⚠️ {dupes_rows:,} duplicate rows detected")
         if len(df.columns) < 2:
             warnings_list.append("⚠️ Only 1 column detected — charts work best with multiple columns")
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
@@ -231,7 +298,7 @@ def get_sample_data():
 def get_groq_key():
     try:
         return st.secrets["GROQ_API_KEY"]
-    except:
+    except Exception:
         return None
 
 
@@ -391,8 +458,9 @@ if page == "🏠 Home":
             st.success(f"✅ **{uploaded.name}** loaded — {len(df):,} rows, {len(df.columns)} columns")
             st.info("👈 Use the sidebar to navigate to Dashboard, BeruDataNarrate or Data Explorer")
 
+            # ✅ FIX APPLIED: safe_dataframe() instead of st.dataframe()
             with st.expander("👀 Preview first 5 rows"):
-                st.dataframe(df.head(), use_container_width=True)
+                safe_dataframe(df.head(), use_container_width=True)
 
     elif st.session_state.df is not None:
         st.success(f"✅ **{st.session_state.file_name}** is loaded and ready")
@@ -463,6 +531,7 @@ if page == "🏠 Home":
 
     st.divider()
     st.caption("BeruAnalytics | Built by Felix Beru Tsinzole | Nairobi, Kenya 🇰🇪")
+
 
 # ================================================
 # PAGE 2 — DASHBOARD
@@ -600,6 +669,7 @@ elif page == "📊 Dashboard":
     st.divider()
     st.caption("BeruAnalytics | Interactive Dashboard | Built by Felix Beru Tsinzole")
 
+
 # ================================================
 # PAGE 3 — BERUDATANARRATE
 # ================================================
@@ -615,8 +685,9 @@ elif page == "🤖 BeruDataNarrate":
             st.session_state.df = df
             st.session_state.file_name = uploaded.name
             st.success(f"✅ {uploaded.name} — {len(df):,} rows, {len(df.columns)} columns")
+            # ✅ FIX APPLIED: safe_dataframe() instead of st.dataframe()
             with st.expander("👀 Preview Data"):
-                st.dataframe(df.head(10), use_container_width=True)
+                safe_dataframe(df.head(10), use_container_width=True)
 
     if st.session_state.df is not None:
         df = st.session_state.df
@@ -638,7 +709,6 @@ elif page == "🤖 BeruDataNarrate":
 
         st.divider()
 
-        # Try secrets first
         secret_key = get_groq_key()
         if secret_key:
             api_key = secret_key
@@ -1006,6 +1076,7 @@ No markdown. No backticks. Only JSON."""
                             import traceback
                             st.code(traceback.format_exc())
 
+
 # ================================================
 # PAGE 4 — AI ASSISTANT
 # ================================================
@@ -1020,6 +1091,7 @@ elif page == "💬 AI Assistant":
 
     df = st.session_state.df
 
+    # ✅ FIX APPLIED: safe_dataframe() instead of st.dataframe()
     with st.expander("📊 Your Data Summary"):
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -1028,7 +1100,7 @@ elif page == "💬 AI Assistant":
             st.metric("Columns", len(df.columns))
         with col3:
             st.metric("Missing Values", df.isnull().sum().sum())
-        st.dataframe(df.describe(), use_container_width=True)
+        safe_dataframe(df.describe(), use_container_width=True)
 
     st.divider()
 
@@ -1087,6 +1159,7 @@ Answer clearly and specifically. Be concise and data-driven. Reference actual nu
                 except Exception as e:
                     st.error(f"❌ Error: {e}")
 
+
 # ================================================
 # PAGE 5 — DATA EXPLORER
 # ================================================
@@ -1128,7 +1201,9 @@ elif page == "📋 Data Explorer":
         filtered_df = filtered_df[mask]
 
     st.caption(f"Showing {len(filtered_df):,} of {len(df):,} rows")
-    st.dataframe(filtered_df, use_container_width=True, height=400)
+
+    # ✅ FIX APPLIED: safe_dataframe() instead of st.dataframe()
+    safe_dataframe(filtered_df, use_container_width=True, height=400)
 
     st.divider()
     st.subheader("📥 Export Data")
@@ -1151,7 +1226,9 @@ elif page == "📋 Data Explorer":
     st.subheader("📊 Column Statistics")
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     if numeric_cols:
-        st.dataframe(df[numeric_cols].describe().T, use_container_width=True)
+        # ✅ FIX APPLIED: safe_dataframe() instead of st.dataframe()
+        safe_dataframe(df[numeric_cols].describe().T, use_container_width=True)
+
 
 # ================================================
 # PAGE 6 — ABOUT
