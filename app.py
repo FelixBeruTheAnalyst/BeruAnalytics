@@ -166,35 +166,137 @@ with st.sidebar:
     st.caption("Nairobi, Kenya 🇰🇪")
 
 
-# ================================================
-# ✅ FIX 1: SAFE DATAFRAME DISPLAY WRAPPER
-# Prevents PyArrow crash from duplicate column names
-# and mixed-type columns. Use everywhere instead of
-# st.dataframe() directly.
-# ================================================
-def safe_dataframe(df, **kwargs):
+# ================================================================
+#  PERMANENT DATA SANITIZATION LAYER
+#  ---------------------------------------------------------------
+#  Philosophy: fix every data quality problem ONCE at load time
+#  inside sanitize_dataframe(). Every page, chart, widget, and
+#  export reads from the already-clean st.session_state.df, so
+#  no individual widget ever needs its own defensive code.
+#
+#  Problems solved here — permanently, for any future dataset:
+#
+#  1. DUPLICATE COLUMN NAMES
+#     Cause:  CSV/Excel with repeated headers
+#     Effect: PyArrow crash, narwhals.DuplicateError, plotly crash
+#     Fix:    Rename dupes → col, col_1, col_2 …
+#
+#  2. NON-STRING COLUMN NAMES
+#     Cause:  Numeric headers (1, 2, 3…), NaN from blank Excel cells
+#     Effect: TypeError in st.metric / st.slider / st.selectbox
+#     Fix:    Cast every column name to str, strip whitespace
+#
+#  3. FULLY EMPTY COLUMNS
+#     Cause:  Trailing blank columns in Excel exports
+#     Effect: Misleading stats, empty chart axes
+#     Fix:    Drop columns that are 100% NaN
+#
+#  4. MIXED-TYPE / OBJECT COLUMNS
+#     Cause:  Columns that look numeric but contain stray text
+#     Effect: Arrow serialization crash, .min()/.max() TypeError
+#     Fix:    Try to downcast object columns to numeric;
+#             leave as clean string if they're truly categorical
+#
+#  5. INFINITE VALUES
+#     Cause:  Division-by-zero in source data (e.g. growth %)
+#     Effect: Plotly chart errors, slider crashes on inf min/max
+#     Fix:    Replace ±inf with NaN
+#
+#  6. WHITESPACE-ONLY STRING VALUES
+#     Cause:  Excel cells with spaces instead of blanks
+#     Effect: Counted as data, distorts category counts
+#     Fix:    Replace "   " → NaN in string columns
+# ================================================================
+
+def sanitize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Single entry-point that cleans a raw DataFrame at load time.
+    Call once; every downstream page receives a guaranteed-clean df.
+    Returns the sanitized DataFrame.
+    """
+    df = df.copy()
+
+    # ── 1. Column names → clean strings ──────────────────────────
+    # Converts int/float/NaN column names to strings, strips spaces.
+    # Prevents TypeError in every st.metric / st.slider / st.selectbox.
+    df.columns = [str(c).strip() for c in df.columns]
+
+    # ── 2. Deduplicate column names ───────────────────────────────
+    # Renames col, col → col, col_1 so PyArrow, narwhals, and
+    # plotly (which all require unique column names) never crash.
+    if df.columns.duplicated().any():
+        cols = pd.Series(df.columns)
+        for dup in cols[cols.duplicated()].unique():
+            idxs = cols[cols == dup].index.tolist()
+            for n, idx in enumerate(idxs):
+                if n != 0:
+                    cols[idx] = f"{dup}_{n}"
+        df.columns = cols.tolist()
+
+    # ── 3. Drop fully-empty columns ──────────────────────────────
+    # Removes columns that are 100% NaN — usually trailing Excel cols.
+    df.dropna(axis=1, how='all', inplace=True)
+
+    # ── 4. Replace ±inf with NaN ─────────────────────────────────
+    # Prevents slider crash (float('inf') as min/max) and chart errors.
+    df.replace([np.inf, -np.inf], np.nan, inplace=True)
+
+    # ── 5. Clean string columns ───────────────────────────────────
+    # In object columns: strip leading/trailing spaces, convert
+    # whitespace-only cells to NaN so they don't pollute categories.
+    for col in df.select_dtypes(include='object').columns:
+        df[col] = df[col].apply(
+            lambda x: np.nan if isinstance(x, str) and x.strip() == '' else
+                      x.strip() if isinstance(x, str) else x
+        )
+
+    # ── 6. Downcast object columns that are actually numeric ──────
+    # e.g. a "Revenue" column stored as object because of one stray
+    # comma or space. pd.to_numeric with errors='coerce' recovers it.
+    for col in df.select_dtypes(include='object').columns:
+        attempted = pd.to_numeric(df[col], errors='coerce')
+        # Only convert if at least 80% of non-null values parsed cleanly
+        non_null = df[col].notna().sum()
+        parsed   = attempted.notna().sum()
+        if non_null > 0 and (parsed / non_null) >= 0.8:
+            df[col] = attempted
+
+    return df
+
+
+# ================================================================
+#  SAFE DISPLAY WRAPPER
+#  ---------------------------------------------------------------
+#  Even after sanitize_dataframe(), display-time issues can arise
+#  from filtered subsets or describe() outputs that introduce new
+#  type problems. This wrapper is the last line of defence for
+#  st.dataframe() calls — it should never need to do much work
+#  because the data is already clean, but it catches edge cases.
+# ================================================================
+
+def safe_dataframe(df: pd.DataFrame, **kwargs):
     """
     Safe wrapper around st.dataframe().
-    Fixes duplicate column names and mixed-type columns
-    that cause PyArrow / Arrow serialization crashes in Streamlit.
+    Handles any residual type issues that survive sanitization
+    (e.g. describe() output, filtered subsets with odd dtypes).
+    Always use this instead of st.dataframe() directly.
     """
     display_df = df.copy()
 
-    # Fix duplicate column names (root cause of the crash)
+    # Ensure column names are strings (e.g. describe() uses stat names)
+    display_df.columns = [str(c) for c in display_df.columns]
+
+    # Remove any duplicate columns that crept in post-sanitization
     if display_df.columns.duplicated().any():
-        dupes = display_df.columns[display_df.columns.duplicated()].tolist()
-        st.warning(f"⚠️ Duplicate columns detected and auto-fixed: {dupes}")
         display_df = display_df.loc[:, ~display_df.columns.duplicated(keep='first')]
 
-    # Fix mixed-type object columns that also break Arrow serialization
-    for col in display_df.columns:
-        if display_df[col].dtype == object:
-            try:
-                display_df[col] = display_df[col].astype(str)
-            except Exception:
-                pass
+    # Cast remaining object columns to str for Arrow compatibility
+    for col in display_df.select_dtypes(include='object').columns:
+        try:
+            display_df[col] = display_df[col].astype(str)
+        except Exception:
+            pass
 
-    # Attempt to display; fall back to plain dict if Arrow still fails
     try:
         st.dataframe(display_df, **kwargs)
     except Exception as e:
@@ -202,45 +304,77 @@ def safe_dataframe(df, **kwargs):
         st.write(display_df.head(10).to_dict(orient='records'))
 
 
-# ================================================
-# ✅ FIX 2: DEDUPLICATE COLUMNS IN load_data()
-# Cleans column names at the source so every page
-# that reads st.session_state.df is protected.
-# ================================================
-def deduplicate_columns(df):
+# ================================================================
+#  SAFE NUMERIC HELPERS
+#  ---------------------------------------------------------------
+#  Centralised helpers for min/max/mean/sum on columns that may
+#  still contain NaN after sanitization (legitimate missing data).
+#  Prevents crashes in sliders, KPI cards, and chart aggregations.
+# ================================================================
+
+def safe_min(series) -> float:
+    """Returns float min, ignoring NaN. Returns 0.0 if all NaN."""
+    v = pd.to_numeric(series, errors='coerce').min(skipna=True)
+    return float(v) if pd.notna(v) else 0.0
+
+def safe_max(series) -> float:
+    """Returns float max, ignoring NaN. Returns 1.0 if all NaN."""
+    v = pd.to_numeric(series, errors='coerce').max(skipna=True)
+    return float(v) if pd.notna(v) else 1.0
+
+def safe_mean(series) -> float:
+    """Returns float mean, ignoring NaN. Returns 0.0 if all NaN."""
+    v = pd.to_numeric(series, errors='coerce').mean(skipna=True)
+    return float(v) if pd.notna(v) else 0.0
+
+def safe_sum(series) -> float:
+    """Returns float sum, ignoring NaN. Returns 0.0 if all NaN."""
+    v = pd.to_numeric(series, errors='coerce').sum(skipna=True)
+    return float(v) if pd.notna(v) else 0.0
+
+
+# ================================================================
+#  SAFE PLOTLY SCATTER
+#  ---------------------------------------------------------------
+#  plotly express passes the whole df to narwhals which re-checks
+#  for duplicate column names even after our sanitization, because
+#  filtered_df is a view/copy that may re-introduce the issue.
+#  This wrapper guarantees the df passed to px is always clean.
+# ================================================================
+
+def safe_scatter(df: pd.DataFrame, **kwargs) -> go.Figure:
     """
-    Renames duplicate columns by appending _1, _2 etc.
-    Example: ['Sales', 'Sales', 'Date'] → ['Sales', 'Sales_1', 'Date']
+    Wrapper around px.scatter that guarantees the DataFrame passed
+    to plotly/narwhals has unique string column names.
+    Prevents narwhals.DuplicateError permanently.
     """
-    cols = pd.Series(df.columns)
-    for dup in cols[cols.duplicated()].unique():
-        indices = cols[cols == dup].index.tolist()
-        for i, idx in enumerate(indices):
-            if i != 0:
-                cols[idx] = f"{dup}_{i}"
-    df.columns = cols
-    return df
+    plot_df = df.copy()
+    plot_df.columns = [str(c) for c in plot_df.columns]
+    if plot_df.columns.duplicated().any():
+        plot_df = plot_df.loc[:, ~plot_df.columns.duplicated(keep='first')]
+    # hover_data must only reference columns that exist
+    hover_cols = [c for c in kwargs.pop('hover_data', []) if c in plot_df.columns]
+    return px.scatter(plot_df, hover_data=hover_cols if hover_cols else None, **kwargs)
 
 
 # ================================================
 # HELPER FUNCTIONS
 # ================================================
 def load_data(uploaded_file):
+    """
+    Loads CSV or Excel and immediately sanitizes the result.
+    All pages read from the sanitized df — no page-level fixes needed.
+    """
     try:
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file, encoding='latin1')
         else:
             df = pd.read_excel(uploaded_file)
 
-        # Strip whitespace from column names
-        df.columns = df.columns.str.strip()
-
-        # ✅ FIX: Deduplicate column names immediately after loading
-        if df.columns.duplicated().any():
-            dupes = df.columns[df.columns.duplicated()].tolist()
-            st.warning(f"⚠️ Duplicate column names found and auto-fixed: {dupes}. "
-                       f"This was causing the app crash — now resolved.")
-            df = deduplicate_columns(df)
+        # ── SANITIZE ONCE HERE ────────────────────────────────────
+        # This is the only place sanitization is needed.
+        # Every downstream page, chart, and widget is clean.
+        df = sanitize_dataframe(df)
 
         if len(df) == 0:
             st.error("❌ The uploaded file is empty.")
@@ -545,30 +679,23 @@ elif page == "📊 Dashboard":
         st.stop()
 
     df = st.session_state.df
-    # ✅ FIX: ensure all column names are strings — protects every widget label downstream
-    df.columns = [str(c) for c in df.columns]
-    st.session_state.df = df
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+    numeric_cols      = df.select_dtypes(include=[np.number]).columns.tolist()
+    categorical_cols  = df.select_dtypes(include=['object']).columns.tolist()
 
     with st.sidebar:
         st.markdown("### 🔍 Filters")
         filtered_df = df.copy()
         for col in numeric_cols[:3]:
-            try:
-                col_label = str(col)  # ✅ FIX: cast to string
-                col_clean = pd.to_numeric(filtered_df[col], errors='coerce')
-                min_val = float(col_clean.min(skipna=True))
-                max_val = float(col_clean.max(skipna=True))
-                if pd.isna(min_val) or pd.isna(max_val) or min_val == max_val:
-                    continue
-                selected = st.slider(col_label, min_val, max_val, (min_val, max_val))
-                filtered_df = filtered_df[
-                    (pd.to_numeric(filtered_df[col], errors='coerce') >= selected[0]) &
-                    (pd.to_numeric(filtered_df[col], errors='coerce') <= selected[1])
-                ]
-            except Exception:
+            col_label = str(col)
+            min_val = safe_min(filtered_df[col])
+            max_val = safe_max(filtered_df[col])
+            if min_val == max_val:
                 continue
+            selected = st.slider(col_label, min_val, max_val, (min_val, max_val))
+            filtered_df = filtered_df[
+                (pd.to_numeric(filtered_df[col], errors='coerce') >= selected[0]) &
+                (pd.to_numeric(filtered_df[col], errors='coerce') <= selected[1])
+            ]
         for col in categorical_cols[:2]:
             options = df[col].dropna().unique().tolist()
             selected_cats = st.multiselect(str(col), options, default=options)
@@ -580,14 +707,10 @@ elif page == "📊 Dashboard":
     kpi_cols = st.columns(len(numeric_cols[:4]) if numeric_cols else 1)
     for i, col in enumerate(numeric_cols[:4]):
         with kpi_cols[i]:
-            col_label = str(col)  # ✅ FIX: always cast to string — col may be int/None/Index
-            try:
-                col_numeric = pd.to_numeric(filtered_df[col], errors='coerce')
-                total = col_numeric.sum(skipna=True)
-                mean  = col_numeric.mean(skipna=True)
-                st.metric(label=col_label, value=f"{mean:.1f}", delta=f"Total: {total:,.1f}")
-            except Exception:
-                st.metric(label=col_label, value="N/A", delta="Mixed types")
+            col_label = str(col)
+            total = safe_sum(filtered_df[col])
+            mean  = safe_mean(filtered_df[col])
+            st.metric(label=col_label, value=f"{mean:.1f}", delta=f"Total: {total:,.1f}")
 
     st.divider()
 
@@ -633,10 +756,10 @@ elif page == "📊 Dashboard":
             y_scatter = st.selectbox("Y Axis", numeric_cols,
                                       index=min(1, len(numeric_cols)-1), key="scatter_y")
             color_col = categorical_cols[0] if categorical_cols else None
-            fig_scatter = px.scatter(filtered_df, x=x_scatter, y=y_scatter,
-                                      color=color_col,
-                                      hover_data=filtered_df.columns.tolist(),
-                                      title=f"{x_scatter} vs {y_scatter}")
+            fig_scatter = safe_scatter(filtered_df, x=x_scatter, y=y_scatter,
+                                       color=color_col,
+                                       hover_data=filtered_df.columns.tolist(),
+                                       title=f"{x_scatter} vs {y_scatter}")
             fig_scatter.update_layout(height=400, plot_bgcolor='#f8f9fa',
                                        paper_bgcolor='white',
                                        margin=dict(l=0, r=0, t=40, b=0))
