@@ -506,7 +506,7 @@ if page == "🏠 Home":
         <div class='feature-card' style='text-align:center; cursor:pointer;'>
             <h3 style='font-size:24px; margin:0;'>📊</h3>
             <h3>Dashboard</h3>
-            <p>Interactive charts and KPI cards — bar, pie, scatter,
+            <p>Interactive charts and KPI cards  bar, pie, scatter,
             heatmap and line charts generated instantly from your data.</p>
         </div>
         """, unsafe_allow_html=True)
@@ -522,7 +522,7 @@ if page == "🏠 Home":
         <div class='feature-card' style='text-align:center; cursor:pointer;'>
             <h3 style='font-size:24px; margin:0;'>🤖</h3>
             <h3>BeruDataNarrate</h3>
-            <p>AI-powered report generator — upload data, get a
+            <p>AI-powered report generator upload data, get a
             professional Word and PDF report in minutes.</p>
         </div>
         """, unsafe_allow_html=True)
@@ -863,7 +863,7 @@ elif page == "📊 Dashboard":
 elif page == "🤖 BeruDataNarrate":
     st.markdown("<div class='section-header'>🤖 BeruDataNarrate — AI Report Generator</div>",
                 unsafe_allow_html=True)
-    st.markdown("Upload your data, describe what it contains, and BeruDataNarrate will generate a professional analysis report with charts, insights and recommendations — powered by AI.")
+    st.markdown("Upload your data, describe what it contains, and BeruDataNarrate will generate a professional analysis report with charts, insights and recommendations powered by AI.")
 
     uploaded = st.file_uploader("Upload CSV or Excel file", type=['csv', 'xlsx', 'xls'])
     if uploaded:
@@ -1435,7 +1435,7 @@ elif page == "ℹ️ About":
         Upload your CSV or Excel file and get:
         - **Interactive dashboards** with KPI cards and multiple chart types
         - **AI-generated reports** in Word and PDF format
-        - **Natural language insights** — ask questions, get answers
+        - **Natural language insights**  ask questions, get answers
         - **Smart data exploration** with search, filter and export
 
         ### Who is it for?
@@ -1446,11 +1446,11 @@ elif page == "ℹ️ About":
         - Anyone with data who needs professional insights fast
 
         ### Technology
-        - **Python** — data processing
-        - **Plotly** — interactive visualizations
-        - **Streamlit** — web application framework
-        - **Groq LLaMA** — AI analysis and insights
-        - **ReportLab + python-docx** — professional report generation
+        - **Python** for data processing
+        - **Plotly** for interactive visualizations
+        - **Streamlit** for web application framework
+        - **Groq LLaMA** fo AI analysis and insights
+        - **ReportLab + python-docx** for professional report generation
         """)
 
     with col2:
@@ -1493,7 +1493,7 @@ elif page == "ℹ️ About":
 
         All uploaded data lives only in memory for the
         duration of your browser session.
-        When you close the tab — it is gone.
+        When you close the tab it is gone.
         """)
     with col4:
         st.warning("""
@@ -1504,7 +1504,7 @@ elif page == "ℹ️ About":
         - Streamlit Cloud temporarily processes
           your data during the session
 
-        Your data is never permanently stored —
+        Your data is never permanently stored
         but a summary is shared with our AI provider.
         """)
 
