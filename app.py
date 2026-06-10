@@ -479,7 +479,79 @@ def get_groq_key():
         return st.secrets["GROQ_API_KEY"]
     except Exception:
         return None
+def apply_chart_theme(fig):
+    """
+    High-contrast professional BI theme.
+    Makes legends, labels, titles, axes, tooltips and annotations
+    highly visible on all charts.
+    """
 
+    fig.update_layout(
+        template="plotly_white",
+
+        font=dict(
+            family="Arial",
+            size=14,
+            color="#000000"
+        ),
+
+        title=dict(
+            font=dict(
+                size=20,
+                color="#000000"
+            )
+        ),
+
+        legend=dict(
+            font=dict(
+                size=14,
+                color="#000000"
+            ),
+            bgcolor="rgba(255,255,255,0.98)",
+            bordercolor="#000000",
+            borderwidth=1
+        ),
+
+        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="#FFFFFF",
+
+        hoverlabel=dict(
+            bgcolor="white",
+            font_size=14,
+            font_family="Arial",
+            font_color="black"
+        )
+    )
+
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="#D9D9D9",
+        zerolinecolor="#A0A0A0",
+        title_font=dict(
+            size=15,
+            color="#000000"
+        ),
+        tickfont=dict(
+            size=13,
+            color="#000000"
+        )
+    )
+
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor="#D9D9D9",
+        zerolinecolor="#A0A0A0",
+        title_font=dict(
+            size=15,
+            color="#000000"
+        ),
+        tickfont=dict(
+            size=13,
+            color="#000000"
+        )
+    )
+
+    return fig
 
 # ================================================
 # PAGE 1 — HOME
