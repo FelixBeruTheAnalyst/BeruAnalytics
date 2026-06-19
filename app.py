@@ -7,6 +7,7 @@ from plotly.subplots import make_subplots
 import io
 import os
 import json
+import html
 from datetime import datetime
 
 # ================================================
@@ -24,38 +25,176 @@ st.set_page_config(
 # ================================================
 st.markdown("""
 <style>
-    .main { background-color: #F8F9FA; }
+    :root {
+        --ba-bg: #F5F7FA;
+        --ba-surface: #FFFFFF;
+        --ba-text: #172033;
+        --ba-muted: #5D6B7A;
+        --ba-border: #DDE6EA;
+        --ba-primary: #1A6B72;
+        --ba-primary-dark: #123F47;
+        --ba-accent: #E8590C;
+        --ba-success: #14855F;
+        --ba-shadow: 0 12px 32px rgba(23, 32, 51, 0.08);
+    }
+
+    .main, .stApp { background-color: var(--ba-bg); color: var(--ba-text); }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    .hero {
-        background: linear-gradient(135deg, #1A6B72 0%, #1A3A5C 100%);
-        border-radius: 16px;
-        padding: 48px 40px;
-        color: white;
-        margin-bottom: 32px;
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 4rem;
+        max-width: 1180px;
     }
-    .hero h1 { font-size: 42px; font-weight: 800; margin: 0 0 12px 0; color: white; }
-    .hero p { font-size: 18px; opacity: 0.9; margin: 0 0 24px 0; color: white; }
+
+    .hero {
+        background:
+            linear-gradient(135deg, rgba(18,63,71,0.96), rgba(26,107,114,0.92)),
+            radial-gradient(circle at 82% 18%, rgba(232,89,12,0.32), transparent 30%);
+        border-radius: 18px;
+        padding: 44px 42px;
+        color: white;
+        margin-bottom: 22px;
+        box-shadow: var(--ba-shadow);
+        border: 1px solid rgba(255,255,255,0.12);
+    }
+    .hero h1 {
+        font-size: clamp(34px, 5vw, 54px);
+        font-weight: 800;
+        margin: 0 0 12px 0;
+        color: white;
+        letter-spacing: 0;
+        line-height: 1.06;
+    }
+    .hero p {
+        font-size: 18px;
+        opacity: 0.92;
+        margin: 0 0 22px 0;
+        color: white;
+        max-width: 720px;
+        line-height: 1.65;
+    }
+    .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.25);
+        border-radius: 999px;
+        padding: 7px 13px;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 18px;
+    }
+    .pill-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+    }
+    .pill {
+        border-radius: 999px;
+        padding: 7px 12px;
+        background: rgba(255,255,255,0.12);
+        color: white;
+        font-size: 13px;
+        font-weight: 600;
+        border: 1px solid rgba(255,255,255,0.16);
+    }
+
+    .upload-panel {
+        background: var(--ba-surface);
+        border: 1px solid var(--ba-border);
+        border-radius: 14px;
+        padding: 24px;
+        box-shadow: var(--ba-shadow);
+        margin: 20px 0 28px 0;
+    }
+    .upload-panel h2 {
+        margin: 0 0 6px 0;
+        font-size: 24px;
+        color: var(--ba-text);
+    }
+    .upload-panel p {
+        color: var(--ba-muted);
+        margin: 0;
+        line-height: 1.55;
+    }
+
+    .success-banner {
+        background: rgba(20,133,95,0.1);
+        border: 1px solid rgba(20,133,95,0.25);
+        color: var(--ba-text);
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin: 16px 0;
+        animation: baFadeUp 0.45s ease both;
+    }
+    @keyframes baFadeUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .metric-card {
+        background: var(--ba-surface);
+        border: 1px solid var(--ba-border);
+        border-radius: 12px;
+        padding: 18px;
+        min-height: 118px;
+        box-shadow: 0 8px 22px rgba(23,32,51,0.06);
+    }
+    .metric-card .label {
+        color: var(--ba-muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+    .metric-card .value {
+        color: var(--ba-text);
+        font-size: 28px;
+        font-weight: 800;
+        line-height: 1;
+    }
+    .metric-card .hint {
+        color: var(--ba-muted);
+        font-size: 13px;
+        margin-top: 10px;
+    }
 
     .feature-card {
-        background: white;
+        background: var(--ba-surface);
         border-radius: 12px;
         padding: 24px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: 0 8px 22px rgba(23,32,51,0.06);
         height: 100%;
-        border-top: 3px solid #1A6B72;
+        border: 1px solid var(--ba-border);
+        border-top: 3px solid var(--ba-primary);
+        transition: transform 0.16s ease, box-shadow 0.16s ease;
     }
-    .feature-card h3 { color: #1A6B72; font-size: 18px; margin-bottom: 8px; }
-    .feature-card p { color: #555555; font-size: 14px; line-height: 1.6; }
+    .feature-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 32px rgba(23,32,51,0.1);
+    }
+    .feature-card h3 { color: var(--ba-primary); font-size: 18px; margin-bottom: 8px; }
+    .feature-card p { color: var(--ba-muted); font-size: 14px; line-height: 1.6; }
 
     .section-header {
         font-size: 22px;
         font-weight: 700;
-        color: #1A1A2E;
-        border-bottom: 3px solid #1A6B72;
+        color: var(--ba-text);
+        border-bottom: 3px solid var(--ba-primary);
         padding-bottom: 8px;
-        margin-bottom: 24px;
+        margin: 26px 0 18px 0;
+    }
+    .page-kicker {
+        color: var(--ba-primary);
+        font-size: 13px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
     }
 
     .nav-btn-container {
@@ -65,11 +204,11 @@ st.markdown("""
         flex-wrap: wrap;
     }
     .nav-btn {
-        background: white;
-        border: 2px solid #1A6B72;
+        background: var(--ba-surface);
+        border: 2px solid var(--ba-primary);
         border-radius: 8px;
         padding: 12px 20px;
-        color: #1A6B72;
+        color: var(--ba-primary);
         font-weight: 600;
         font-size: 14px;
         cursor: pointer;
@@ -79,7 +218,7 @@ st.markdown("""
         position: relative;
     }
     .nav-btn:hover {
-        background: #1A6B72;
+        background: var(--ba-primary);
         color: white;
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(26,107,114,0.3);
@@ -106,6 +245,19 @@ st.markdown("""
         visibility: visible;
         opacity: 1;
     }
+
+    .stButton > button {
+        border-radius: 9px;
+        font-weight: 700;
+    }
+
+    div[data-testid="stMetric"] {
+        background: var(--ba-surface);
+        border: 1px solid var(--ba-border);
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 8px 22px rgba(23,32,51,0.05);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -118,6 +270,8 @@ if 'file_name' not in st.session_state:
     st.session_state.file_name = None
 if 'analysis' not in st.session_state:
     st.session_state.analysis = None
+if 'dark_mode' not in st.session_state:
+    st.session_state.dark_mode = False
 if 'page' not in st.session_state:
     st.session_state.page = "🏠 Home"
 
@@ -146,6 +300,9 @@ with st.sidebar:
     st.session_state.page = page
 
     st.divider()
+    st.toggle("Dark mode", key="dark_mode")
+
+    st.divider()
 
     if st.session_state.df is not None:
         df = st.session_state.df
@@ -163,7 +320,32 @@ with st.sidebar:
 
     st.divider()
     st.caption("Built by Felix Beru Tsinzole")
-    st.caption("Nairobi, Kenya 🇰🇪")
+    st.caption("Nairobi, Kenya")
+
+if st.session_state.dark_mode:
+    st.markdown("""
+    <style>
+        :root {
+            --ba-bg: #0F172A;
+            --ba-surface: #111C2F;
+            --ba-text: #EAF0F7;
+            --ba-muted: #A8B3C2;
+            --ba-border: #26364D;
+            --ba-primary: #38B5B8;
+            --ba-primary-dark: #1A6B72;
+            --ba-accent: #FF9A5B;
+            --ba-shadow: 0 16px 38px rgba(0,0,0,0.28);
+        }
+        .stApp, .main { background-color: var(--ba-bg); }
+        [data-testid="stSidebar"] {
+            background-color: #0B1220;
+            border-right: 1px solid var(--ba-border);
+        }
+        .upload-panel, .feature-card, .metric-card, div[data-testid="stMetric"] {
+            background: var(--ba-surface);
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
 
 # ================================================================
@@ -553,6 +735,41 @@ def apply_chart_theme(fig):
 
     return fig
 
+
+def get_data_profile(df: pd.DataFrame) -> dict:
+    total_cells = max(len(df) * len(df.columns), 1)
+    missing_values = int(df.isnull().sum().sum())
+    duplicate_rows = int(df.duplicated().sum())
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+    completeness = max(0, round(100 - ((missing_values / total_cells) * 100), 1))
+
+    return {
+        "rows": len(df),
+        "columns": len(df.columns),
+        "missing_values": missing_values,
+        "duplicate_rows": duplicate_rows,
+        "numeric_cols": numeric_cols,
+        "categorical_cols": categorical_cols,
+        "completeness": completeness,
+    }
+
+
+def metric_card(label: str, value, hint: str = ""):
+    safe_label = html.escape(str(label))
+    safe_value = html.escape(str(value))
+    safe_hint = html.escape(str(hint))
+    st.markdown(
+        f"""
+        <div class="metric-card">
+            <div class="label">{safe_label}</div>
+            <div class="value">{safe_value}</div>
+            <div class="hint">{safe_hint}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 # ================================================
 # PAGE 1 — HOME
 # ================================================
@@ -560,12 +777,80 @@ if page == "🏠 Home":
 
     st.markdown("""
     <div class='hero'>
-        <h1>📊 BeruAnalytics</h1>
-        <p>Upload your data. Get instant AI-powered analysis,
-        interactive dashboards and professional reports in minutes.</p>
-        <p style='font-size:14px; opacity:0.7;'>Powered by AI | Built for Kenya and beyond 🇰🇪</p>
+        <div class='hero-badge'>AI-powered analytics for real business data</div>
+        <h1>Turn spreadsheets into decisions in minutes.</h1>
+        <p>Upload a CSV or Excel file and BeruAnalytics will clean it, profile it,
+        generate KPI cards, build interactive charts and prepare AI-ready insights.</p>
+        <div class='pill-row'>
+            <span class='pill'>CSV + Excel</span>
+            <span class='pill'>Interactive dashboards</span>
+            <span class='pill'>AI reports</span>
+            <span class='pill'>Built in Kenya</span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class='upload-panel'>
+        <div class='page-kicker'>Start here</div>
+        <h2>Upload your data or load the sample dataset</h2>
+        <p>The app will immediately validate your file, summarize quality issues,
+        and unlock the dashboard, report generator, assistant and explorer pages.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_upload, col_sample = st.columns([3, 1])
+
+    with col_upload:
+        uploaded = st.file_uploader(
+            "Upload CSV or Excel file",
+            type=['csv', 'xlsx', 'xls'],
+            help="Supported: CSV, Excel | Max recommended: 100,000 rows"
+        )
+
+    with col_sample:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Try Sample Data",
+                      use_container_width=True,
+                      help="Load a sample Kenya sales dataset to explore all features"):
+            df_sample = get_sample_data()
+            st.session_state.df = df_sample
+            st.session_state.file_name = "sample_kenya_sales_data.csv"
+            st.toast("Sample dataset loaded", icon="✅")
+            st.balloons()
+
+    if uploaded:
+        df = load_data(uploaded)
+        if df is not None:
+            st.session_state.df = df
+            st.session_state.file_name = uploaded.name
+            st.toast("Dataset loaded successfully", icon="✅")
+
+    if st.session_state.df is not None:
+        df = st.session_state.df
+        profile = get_data_profile(df)
+
+        st.markdown(f"""
+        <div class='success-banner'>
+            <strong>{html.escape(str(st.session_state.file_name))}</strong> is loaded and ready for analysis.
+            Use the navigation cards or sidebar to continue.
+        </div>
+        """, unsafe_allow_html=True)
+
+        k1, k2, k3, k4, k5 = st.columns(5)
+        with k1:
+            metric_card("Rows", f"{profile['rows']:,}", "Records detected")
+        with k2:
+            metric_card("Columns", profile["columns"], "Fields available")
+        with k3:
+            metric_card("Completeness", f"{profile['completeness']}%", "Non-missing cells")
+        with k4:
+            metric_card("Duplicates", profile["duplicate_rows"], "Rows to review")
+        with k5:
+            metric_card("Numeric Fields", len(profile["numeric_cols"]), "KPI-ready columns")
+
+        with st.expander("Preview first 5 rows"):
+            safe_dataframe(df.head(), use_container_width=True)
 
     # ── FUNCTIONAL NAVIGATION BUTTONS ──
     st.markdown("### 🧭 Quick Navigation")
@@ -652,70 +937,6 @@ if page == "🏠 Home":
                       type="primary"):
             st.session_state.page = "ℹ️ About"
             st.rerun()
-
-    # Get Started
-    st.markdown("<div class='section-header'>🚀 Get Started</div>",
-                unsafe_allow_html=True)
-
-    col_upload, col_sample = st.columns([3, 1])
-
-    with col_upload:
-        uploaded = st.file_uploader(
-            "Upload your CSV or Excel file to begin",
-            type=['csv', 'xlsx', 'xls'],
-            help="Supported: CSV, Excel | Max recommended: 100,000 rows"
-        )
-
-    with col_sample:
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🎯 Try Sample Data",
-                      use_container_width=True,
-                      help="Load a sample Kenya sales dataset to explore all features"):
-            df_sample = get_sample_data()
-            st.session_state.df = df_sample
-            st.session_state.file_name = "sample_kenya_sales_data.csv"
-            st.success("✅ Sample dataset loaded — 200 rows of Kenya sales data!")
-            st.info("👈 Navigate to Dashboard or BeruDataNarrate to explore")
-
-    if uploaded:
-        df = load_data(uploaded)
-        if df is not None:
-            st.session_state.df = df
-            st.session_state.file_name = uploaded.name
-
-            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-
-            st.divider()
-            st.markdown("### ✅ Data Quality Report")
-
-            q1, q2, q3, q4, q5 = st.columns(5)
-            with q1:
-                st.metric("Total Rows", f"{len(df):,}")
-            with q2:
-                st.metric("Total Columns", len(df.columns))
-            with q3:
-                missing = df.isnull().sum().sum()
-                st.metric("Missing Values", missing,
-                          delta="Clean ✅" if missing == 0 else "⚠️ Found",
-                          delta_color="normal" if missing == 0 else "inverse")
-            with q4:
-                dupes = df.duplicated().sum()
-                st.metric("Duplicates", dupes,
-                          delta="Clean ✅" if dupes == 0 else "⚠️ Found",
-                          delta_color="normal" if dupes == 0 else "inverse")
-            with q5:
-                st.metric("Numeric Cols", len(numeric_cols))
-
-            st.success(f"✅ **{uploaded.name}** loaded — {len(df):,} rows, {len(df.columns)} columns")
-            st.info("👈 Use the sidebar to navigate to Dashboard, BeruDataNarrate or Data Explorer")
-
-            # ✅ FIX APPLIED: safe_dataframe() instead of st.dataframe()
-            with st.expander("👀 Preview first 5 rows"):
-                safe_dataframe(df.head(), use_container_width=True)
-
-    elif st.session_state.df is not None:
-        st.success(f"✅ **{st.session_state.file_name}** is loaded and ready")
-        st.info("👈 Navigate using the sidebar")
 
     st.divider()
 
