@@ -250,13 +250,17 @@ st.markdown("""
         border-radius: 9px;
         font-weight: 700;
     }
-    .stButton > button[kind="secondary"] {
+    .stButton > button[kind="secondary"],
+    .stButton > button[data-testid="stBaseButton-secondary"],
+    button[data-testid="stBaseButton-secondary"] {
         background: var(--ba-surface) !important;
         border: 1px solid var(--ba-primary) !important;
         color: var(--ba-primary) !important;
         opacity: 1 !important;
     }
-    .stButton > button[kind="secondary"]:hover {
+    .stButton > button[kind="secondary"]:hover,
+    .stButton > button[data-testid="stBaseButton-secondary"]:hover,
+    button[data-testid="stBaseButton-secondary"]:hover {
         background: var(--ba-primary) !important;
         color: #FFFFFF !important;
     }
@@ -851,6 +855,7 @@ if page == "🏠 Home":
     with col_sample:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("Try Sample Data",
+                      type="primary",
                       use_container_width=True,
                       help="Load a sample Kenya sales dataset to explore all features"):
             df_sample = get_sample_data()
