@@ -250,6 +250,46 @@ st.markdown("""
         border-radius: 9px;
         font-weight: 700;
     }
+    .stButton > button[kind="secondary"] {
+        background: var(--ba-surface) !important;
+        border: 1px solid var(--ba-primary) !important;
+        color: var(--ba-primary) !important;
+        opacity: 1 !important;
+    }
+    .stButton > button[kind="secondary"]:hover {
+        background: var(--ba-primary) !important;
+        color: #FFFFFF !important;
+    }
+
+    [data-testid="stFileUploader"] {
+        color: var(--ba-text);
+    }
+    [data-testid="stFileUploader"] label,
+    [data-testid="stFileUploader"] small,
+    [data-testid="stFileUploader"] p,
+    [data-testid="stFileUploader"] span {
+        color: var(--ba-text) !important;
+    }
+    [data-testid="stFileUploaderDropzone"] {
+        background: var(--ba-surface) !important;
+        border: 1px dashed var(--ba-primary) !important;
+        border-radius: 12px !important;
+    }
+    [data-testid="stFileUploaderDropzone"] button {
+        background: var(--ba-primary) !important;
+        border: 1px solid var(--ba-primary) !important;
+        color: #FFFFFF !important;
+        opacity: 1 !important;
+    }
+    [data-testid="stFileUploaderDropzone"] button:hover {
+        background: var(--ba-primary-dark) !important;
+        border-color: var(--ba-primary-dark) !important;
+        color: #FFFFFF !important;
+    }
+    [data-testid="stFileUploaderDropzone"] svg {
+        color: var(--ba-primary) !important;
+        fill: var(--ba-primary) !important;
+    }
 
     div[data-testid="stMetric"] {
         background: var(--ba-surface);
