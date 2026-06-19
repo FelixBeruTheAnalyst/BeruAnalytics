@@ -302,6 +302,40 @@ st.markdown("""
         padding: 16px;
         box-shadow: 0 8px 22px rgba(23,32,51,0.05);
     }
+    div[data-testid="stMetric"] label,
+    div[data-testid="stMetric"] label p,
+    div[data-testid="stMetric"] [data-testid="stMetricLabel"],
+    div[data-testid="stMetric"] [data-testid="stMetricLabel"] p {
+        color: var(--ba-text) !important;
+        opacity: 1 !important;
+        font-weight: 800 !important;
+    }
+    div[data-testid="stMetric"] [data-testid="stMetricValue"],
+    div[data-testid="stMetric"] [data-testid="stMetricValue"] div,
+    div[data-testid="stMetric"] [data-testid="stMetricValue"] p {
+        color: var(--ba-text) !important;
+        opacity: 1 !important;
+        font-weight: 800 !important;
+    }
+    div[data-testid="stMetric"] [data-testid="stMetricDelta"],
+    div[data-testid="stMetric"] [data-testid="stMetricDelta"] div,
+    div[data-testid="stMetric"] [data-testid="stMetricDelta"] p {
+        color: var(--ba-primary) !important;
+        opacity: 1 !important;
+        font-weight: 700 !important;
+    }
+
+    div[data-testid="stAlert"] {
+        color: var(--ba-text) !important;
+        border-radius: 12px;
+    }
+    div[data-testid="stAlert"] p,
+    div[data-testid="stAlert"] li,
+    div[data-testid="stAlert"] span,
+    div[data-testid="stAlert"] div {
+        color: var(--ba-text) !important;
+        opacity: 1 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
